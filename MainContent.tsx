@@ -272,15 +272,12 @@ interface MainContentProps {
 }
 
 const LionIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2C6.48 2 2 6.48 2 12c0 2.5 1 4.5 2.5 6l1.5 1.5"/>
-    <path d="M18 19.5l1.5-1.5c1.5-1.5 2.5-3.5 2.5-6 0-5.52-4.48-10-10-10"/>
-    <circle cx="9" cy="11" r="1"/>
-    <circle cx="15" cy="11" r="1"/>
-    <path d="M12 14v2m-2-1h4"/>
-    <path d="M7 6c-1 1-1.5 2.5-1.5 4"/>
-    <path d="M17 6c1 1 1.5 2.5 1.5 4"/>
-    <path d="M12 2v2"/>
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5.5c-3.5 0-6.5 2-8 5.5 1.5 3.5 4.5 5.5 8 5.5s6.5-2 8-5.5c-1.5-3.5-4.5-5.5-8-5.5z"/>
+    <circle cx="12" cy="11" r="2.5"/>
+    <path d="M7 3c.5 1.5.5 3.5 0 5M17 3c-.5 1.5-.5 3.5 0 5M4 11h1M19 11h1M12 16v3m-3-1.5h6"/>
+    <path d="M9 21h6l.5-1.5L12 18l-3.5 1.5L9 21z"/>
+    <path d="M12 2v2M5 5l2 2M19 5l-2 2"/>
   </svg>
 );
 
@@ -290,11 +287,42 @@ const MainContent: React.FC<MainContentProps> = ({
   const [startY, setStartY] = useState(0);
   const [pullOffset, setPullOffset] = useState(0);
   const [cacheStatus, setCacheStatus] = useState<'idle' | 'downloading' | 'finished'>('idle');
+  const hasStartedAutoCache = useRef(false);
 
   const filteredVideos = useMemo(() => {
     const excludedIds = interactions.dislikedIds;
     return videos.filter(v => !excludedIds.includes(v.id || v.video_url));
   }, [videos, interactions.dislikedIds]);
+
+  const handleCacheAll = async () => {
+    if (cacheStatus === 'downloading' || filteredVideos.length === 0) return;
+    setCacheStatus('downloading');
+    try {
+      const cache = await caches.open('hadiqa-video-cache-v1');
+      for (const v of filteredVideos) {
+        try {
+          // التحقق مما إذا كان موجوداً مسبقاً في الكاش لتسريع العملية
+          const match = await cache.match(v.video_url);
+          if (!match) {
+            const response = await fetch(v.video_url);
+            if (response.ok) await cache.put(v.video_url, response);
+          }
+        } catch (e) { console.error("Cache fail:", v.video_url); }
+      }
+      setCacheStatus('finished');
+    } catch (e) {
+      console.error("Cache Error:", e);
+      setCacheStatus('idle');
+    }
+  };
+
+  // التحميل التلقائي بمجرد توفر الفيديوهات
+  useEffect(() => {
+    if (!loading && filteredVideos.length > 0 && !hasStartedAutoCache.current) {
+      hasStartedAutoCache.current = true;
+      handleCacheAll();
+    }
+  }, [loading, filteredVideos]);
 
   const unwatchedData = useMemo(() => {
     const seen = new Set();
@@ -347,27 +375,6 @@ const MainContent: React.FC<MainContentProps> = ({
     };
   }, [filteredVideos]);
 
-  const handleCacheAll = async () => {
-    if (cacheStatus !== 'idle') return;
-    setCacheStatus('downloading');
-    try {
-      const cache = await caches.open('hadiqa-video-cache-v1');
-      const urls = filteredVideos.map(v => v.video_url);
-      
-      // نقوم بالتحميل بشكل تسلسلي لتجنب استهلاك موارد الهاتف فجأة
-      for (const url of urls) {
-        try {
-          const response = await fetch(url);
-          if (response.ok) await cache.put(url, response);
-        } catch (e) { console.error("Cache failed for:", url); }
-      }
-      setCacheStatus('finished');
-    } catch (e) {
-      console.error("Cache Error:", e);
-      setCacheStatus('idle');
-    }
-  };
-
   const { 
     s1, s2, sHappy, sNew, sScreams, sLabyrinth, sEnd, sCursed, sNoReturn, sBehind, sHell,
     l1, lInsight, lArchive, lVisions, lLegends 
@@ -377,9 +384,9 @@ const MainContent: React.FC<MainContentProps> = ({
   const allLongs = useMemo(() => filteredVideos.filter(v => v.type === 'long'), [filteredVideos]);
 
   const lionBtnClass = useMemo(() => {
-    if (cacheStatus === 'downloading') return 'text-green-500 border-green-500 bg-green-500/10 shadow-[0_0_20px_#22c55e] animate-pulse';
+    if (cacheStatus === 'downloading') return 'text-green-400 border-green-500 bg-green-500/10 shadow-[0_0_20px_#22c55e] animate-pulse';
     if (cacheStatus === 'finished') return 'text-yellow-400 border-yellow-400 bg-yellow-400/10 shadow-[0_0_20px_#facc15]';
-    return 'text-red-600 border-red-600 bg-red-600/5';
+    return 'text-red-600 border-red-600 bg-red-600/5 shadow-[0_0_10px_rgba(220,38,38,0.2)]';
   }, [cacheStatus]);
 
   return (
@@ -404,16 +411,24 @@ const MainContent: React.FC<MainContentProps> = ({
         <div className="flex items-center gap-2">
            <button 
              onClick={handleCacheAll}
-             className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 ${lionBtnClass}`}
+             className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 active:scale-95 ${lionBtnClass}`}
              title="تحميل الكل للمشاهدة بدون إنترنت"
            >
              <LionIcon />
            </button>
-           <button onClick={onSearchToggle} className="w-10 h-10 rounded-xl bg-blue-500/5 border border-blue-500/30 flex items-center justify-center text-blue-500 transition-all">
+           <button onClick={onSearchToggle} className="w-10 h-10 rounded-xl bg-blue-500/5 border border-blue-500/30 flex items-center justify-center text-blue-500 transition-all active:scale-95">
              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
            </button>
         </div>
       </section>
+
+      {/* الحالة العامة للتحميل */}
+      {cacheStatus === 'downloading' && (
+        <div className="mt-4 bg-green-950/20 border border-green-500/30 rounded-2xl p-3 flex items-center justify-center gap-3 animate-pulse">
+           <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+           <span className="text-[10px] font-black text-green-400 italic">جاري تحميل المستودع كاملاً لضمان عمل التطبيق بدون إنترنت...</span>
+        </div>
+      )}
 
       {s1.length > 0 && (
         <section className="mt-6">
