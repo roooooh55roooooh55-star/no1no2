@@ -295,13 +295,12 @@ const MainContent: React.FC<MainContentProps> = ({
   }, [videos, interactions.dislikedIds]);
 
   const handleCacheAll = async () => {
-    if (cacheStatus === 'downloading' || filteredVideos.length === 0) return;
+    if (filteredVideos.length === 0) return;
     setCacheStatus('downloading');
     try {
       const cache = await caches.open('hadiqa-video-cache-v1');
       for (const v of filteredVideos) {
         try {
-          // التحقق مما إذا كان موجوداً مسبقاً في الكاش لتسريع العملية
           const match = await cache.match(v.video_url);
           if (!match) {
             const response = await fetch(v.video_url);
@@ -316,7 +315,6 @@ const MainContent: React.FC<MainContentProps> = ({
     }
   };
 
-  // التحميل التلقائي بمجرد توفر الفيديوهات
   useEffect(() => {
     if (!loading && filteredVideos.length > 0 && !hasStartedAutoCache.current) {
       hasStartedAutoCache.current = true;
@@ -421,14 +419,6 @@ const MainContent: React.FC<MainContentProps> = ({
            </button>
         </div>
       </section>
-
-      {/* الحالة العامة للتحميل */}
-      {cacheStatus === 'downloading' && (
-        <div className="mt-4 bg-green-950/20 border border-green-500/30 rounded-2xl p-3 flex items-center justify-center gap-3 animate-pulse">
-           <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
-           <span className="text-[10px] font-black text-green-400 italic">جاري تحميل المستودع كاملاً لضمان عمل التطبيق بدون إنترنت...</span>
-        </div>
-      )}
 
       {s1.length > 0 && (
         <section className="mt-6">
