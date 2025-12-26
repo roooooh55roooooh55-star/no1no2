@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Video } from './types.ts';
 import { incrementViewsInDB } from './supabaseClient.ts';
-import { getDeterministicStats, formatBigNumber, LOGO_URL } from './MainContent.tsx';
+import { getDeterministicStats, formatBigNumber, LOGO_URL } from './utils.ts';
 
 interface LongPlayerOverlayProps {
   video: Video;

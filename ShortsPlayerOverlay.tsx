@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Video, UserInteractions } from './types';
-import { getDeterministicStats, formatBigNumber, LOGO_URL } from './MainContent';
+import { Video, UserInteractions } from './types.ts';
+import { getDeterministicStats, formatBigNumber, LOGO_URL } from './utils.ts';
 
 interface ShortsPlayerOverlayProps {
   initialVideo: Video;

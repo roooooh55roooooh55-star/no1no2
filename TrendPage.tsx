@@ -2,9 +2,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Video } from './types.ts';
 import { fetchCloudinaryVideos } from './cloudinaryClient.ts';
-import { getDeterministicStats, formatBigNumber } from './MainContent.tsx';
-
-const LOGO_URL = "https://i.top4top.io/p_3643ksmii1.jpg";
+import { getDeterministicStats, formatBigNumber, LOGO_URL } from './utils.ts';
 
 interface TrendPageProps {
   onPlayShort: (v: Video, list: Video[]) => void;

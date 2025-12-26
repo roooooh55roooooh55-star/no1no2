@@ -25,7 +25,6 @@ const DEFAULT_CATEGORIES = [
   'لحظات مرعبة'
 ];
 
-// واجهة البحث البسيطة والفعالة
 const SearchOverlay: React.FC<{ 
   videos: Video[], 
   onClose: () => void, 
@@ -103,9 +102,12 @@ const App: React.FC = () => {
     if (isHardRefresh) setLoading(true);
     try {
       const data = await fetchCloudinaryVideos();
-      if (!data || data.length === 0) return;
+      if (!data || data.length === 0) {
+        setLoading(false);
+        return;
+      }
       
-      const recommendedOrder = await getRecommendedFeed(data, interactions);
+      const recommendedOrder = await getRecommendedFeed(data, interactions).catch(() => []);
       const orderedVideos = recommendedOrder
         .map(id => data.find(v => v.id === id || v.public_id === id))
         .filter((v): v is Video => !!v);
@@ -125,12 +127,6 @@ const App: React.FC = () => {
 
   useEffect(() => { loadData(false); }, [loadData]);
   useEffect(() => { localStorage.setItem('al-hadiqa-interactions-v5', JSON.stringify(interactions)); }, [interactions]);
-
-  useEffect(() => {
-    if (!isOverlayActive && rawVideos.length > 0) {
-      loadData(false);
-    }
-  }, [isOverlayActive, loadData]);
 
   const updateWatchHistory = (id: string, progress: number) => {
     setInteractions(prev => {
@@ -183,13 +179,13 @@ const App: React.FC = () => {
       case AppView.ADMIN:
         return <Suspense fallback={null}><AdminDashboard onClose={() => setCurrentView(AppView.HOME)} categories={DEFAULT_CATEGORIES} initialVideos={rawVideos} /></Suspense>;
       case AppView.TREND:
-        return <TrendPage onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} excludedIds={interactions.dislikedIds} />;
+        return <Suspense fallback={null}><TrendPage onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} excludedIds={interactions.dislikedIds} /></Suspense>;
       case AppView.LIKES:
         return <SavedPage savedIds={interactions.likedIds} allVideos={rawVideos} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} title="الإعجابات" />;
       case AppView.SAVED:
         return <SavedPage savedIds={interactions.savedIds} allVideos={rawVideos} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} title="المحفوظات" />;
       case AppView.HIDDEN:
-        return <HiddenVideosPage interactions={interactions} allVideos={rawVideos} onRestore={(id) => setInteractions(prev => ({...prev, dislikedIds: prev.dislikedIds.filter(x => x !== id)}))} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} />;
+        return <Suspense fallback={null}><HiddenVideosPage interactions={interactions} allVideos={rawVideos} onRestore={(id) => setInteractions(prev => ({...prev, dislikedIds: prev.dislikedIds.filter(x => x !== id)}))} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} /></Suspense>;
       case AppView.PRIVACY:
         return <PrivacyPage onOpenAdmin={() => setCurrentView(AppView.ADMIN)} />;
       case AppView.CATEGORY:
@@ -216,9 +212,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#050505] text-white font-['Cairo']">
       <AppBar onViewChange={setCurrentView} onRefresh={() => loadData(false)} currentView={currentView} />
-      <main className="pt-20 max-w-lg mx-auto overflow-x-hidden">{renderContent()}</main>
+      <main className="pt-20 max-w-lg mx-auto overflow-x-hidden min-h-[calc(100vh-80px)]">
+        {renderContent()}
+      </main>
 
       <Suspense fallback={null}><AIOracle /></Suspense>
       {toast && <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1100] bg-red-600 px-6 py-2 rounded-full font-bold shadow-lg shadow-red-600/40 text-xs">{toast}</div>}

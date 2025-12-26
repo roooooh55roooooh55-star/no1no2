@@ -1,27 +1,7 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Video, UserInteractions } from './types.ts';
-
-export const LOGO_URL = "https://i.top4top.io/p_3643ksmii1.jpg";
-
-export const getDeterministicStats = (seed: string) => {
-  let hash = 0;
-  if (!seed) return { views: 0, likes: 0 };
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  const baseViews = Math.abs(hash % 900000) + 500000; 
-  const views = baseViews * (Math.abs(hash % 5) + 2); 
-  const likes = Math.abs(Math.floor(views * (0.12 + (Math.abs(hash % 15) / 100)))); 
-  return { views, likes };
-};
-
-export const formatBigNumber = (num: number) => {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-};
+import { LOGO_URL, getDeterministicStats, formatBigNumber } from './utils.ts';
 
 const VideoCardThumbnail: React.FC<{ 
   video: Video, 
@@ -318,10 +298,9 @@ const MainContent: React.FC<MainContentProps> = ({
     return result;
   }, [interactions.watchHistory, videos]);
 
-  // منطق توزيع الفيديوهات بدون تكرار
   const sectionsData = useMemo(() => {
-    let availShorts = filteredVideos.filter(v => v.type === 'short');
-    let availLongs = filteredVideos.filter(v => v.type === 'long');
+    let availShorts = [...filteredVideos.filter(v => v.type === 'short')];
+    let availLongs = [...filteredVideos.filter(v => v.type === 'long')];
 
     const takeShorts = (n: number) => {
       const chunk = availShorts.slice(0, n);
@@ -391,7 +370,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </div>
       </section>
 
-      {/* 1. مختارات سريعة */}
       {s1.length > 0 && (
         <section className="mt-6">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -408,7 +386,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 2. نواصل الحكاية */}
       {unwatchedData.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -419,7 +396,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 3. كوابيس مطولة */}
       {l1.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -436,7 +412,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 4. جرعة رعب مكثفة */}
       {s2.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -453,7 +428,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 5. رحلة سعيدة (شورتس LTR) */}
       {sHappy.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -464,7 +438,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 6. نبذة (طويل LTR) */}
       {lInsight.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -475,7 +448,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 7. رحلة جديدة (شورتس LTR) */}
       {sNew.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -486,7 +458,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 8. أرشيف الرعب */}
       {lArchive.length > 0 && (
         <section className="mt-12">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -503,7 +474,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 9. صدى الأرواح */}
       {sScreams.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -520,7 +490,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 10. همسات الليل */}
       {sLabyrinth.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -531,7 +500,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 11. ما وراء الطبيعة */}
       {lVisions.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -542,7 +510,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 12. نهاية الدهليز */}
       {sEnd.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -553,7 +520,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 13. المدخل الملعون */}
       {sCursed.length > 0 && (
         <section className="mt-12">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -570,7 +536,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 14. طريق اللا عودة */}
       {sNoReturn.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -581,7 +546,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 15. أساطير سوداء */}
       {lLegends.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -598,7 +562,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 16. خلف الأبواب */}
       {sBehind.length > 0 && (
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-3 px-2">
@@ -609,7 +572,6 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 17. أعماق الجحيم */}
       {sHell.length > 0 && (
         <section className="mt-8 mb-24">
           <div className="flex items-center gap-2 mb-3 px-2">
