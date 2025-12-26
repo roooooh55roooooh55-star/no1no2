@@ -5,56 +5,51 @@ const CLOUD_NAME = 'dlrvn33p0'.trim();
 const COMMON_TAG = 'hadiqa_v4';
 
 /**
- * جلب الفيديوهات باستخدام القائمة العامة JSON (Tag List)
- * تم تحسينه لتجنب أخطاء الشبكة و CORS وتقديم تجربة مستخدم مستقرة
+ * وظيفة لتخزين الفيديوهات فعلياً في ذاكرة الهاتف (Cache Storage)
  */
+export const cacheTrendingVideos = async (videos: Video[]) => {
+  if ('caches' in window) {
+    try {
+      const videoCache = await caches.open('horror-garden-v1');
+      // تحميل أول 7 فيديوهات لضمان تجربة فورية وسلسة
+      const priorityVideos = videos.slice(0, 7);
+      
+      priorityVideos.forEach(async (video) => {
+        const cacheResponse = await videoCache.match(video.video_url);
+        if (!cacheResponse) {
+          fetch(video.video_url).then(res => {
+            if (res.ok) videoCache.put(video.video_url, res);
+          }).catch(() => {});
+        }
+      });
+    } catch (e) {
+      console.error("Cache system failed", e);
+    }
+  }
+};
+
 export const fetchCloudinaryVideos = async (): Promise<Video[]> => {
   try {
     const timestamp = new Date().getTime();
-    // الرابط المباشر لقائمة الفيديوهات بناءً على التاغ
     const targetUrl = `https://res.cloudinary.com/${CLOUD_NAME}/video/list/${COMMON_TAG}.json?t=${timestamp}`;
     
     const response = await fetch(targetUrl, {
       method: 'GET',
-      mode: 'cors', // تأكيد وضع CORS لتجنب أخطاء المتصفح
-      headers: {
-        'Accept': 'application/json'
-      },
+      mode: 'cors',
+      headers: { 'Accept': 'application/json' },
       cache: 'no-store' 
-    }).catch(err => {
-      console.warn("Network error or fetch failed:", err);
-      return null;
     });
 
-    if (!response || !response.ok) {
-      // محاولة جلب البيانات من الكاش المحلي كحل بديل ذكي
+    if (!response.ok) {
       const cached = localStorage.getItem('app_videos_cache');
-      if (cached) {
-        console.log("Serving from local cache due to connection failure.");
-        try {
-          return JSON.parse(cached);
-        } catch (e) {
-          return [];
-        }
-      }
-      return [];
+      return cached ? JSON.parse(cached) : [];
     }
 
     const data = await response.json();
-    const resources = data.resources || [];
-    
-    return mapCloudinaryData(resources);
+    return mapCloudinaryData(data.resources || []);
   } catch (error) {
-    console.warn('Critical fetch failure - Using cache:', error);
     const cached = localStorage.getItem('app_videos_cache');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
+    return cached ? JSON.parse(cached) : [];
   }
 };
 
@@ -63,30 +58,26 @@ const mapCloudinaryData = (resources: any[]): Video[] => {
     const videoType: 'short' | 'long' = (res.height > res.width) ? 'short' : 'long';
     const baseUrl = `https://res.cloudinary.com/${CLOUD_NAME}/video/upload`;
     
-    // تحسين الرابط للجودة التلقائية والتنسيق الأسرع لتقليل استهلاك البيانات وسرعة التحميل
-    const optimizedUrl = `${baseUrl}/q_auto,f_auto/v${res.version}/${res.public_id}.${res.format}`;
+    // الإعدادات السينمائية لضمان أعلى دقة ووضوح (Full HD + Sharpen)
+    const cinematicParams = `q_auto:best,f_auto,e_sharpen:100,c_limit,w_1080,br_5m,vc_h264`;
     
-    // إنشاء رابط صورة (Poster) من الفيديو لتجنب ظهور شاشة سوداء عند التحميل الأول
-    const posterUrl = `${baseUrl}/q_auto,f_auto,so_0/v${res.version}/${res.public_id}.jpg`;
+    const optimizedUrl = `${baseUrl}/${cinematicParams}/v${res.version}/${res.public_id}.mp4`;
+    const posterUrl = `${baseUrl}/q_auto:best,f_auto,so_0/v${res.version}/${res.public_id}.jpg`;
     
-    const categoryTag = res.context?.custom?.caption || 'غموض';
-    const title = res.context?.custom?.caption || 'فيديو مرعب';
-
     return {
       id: res.public_id,
       public_id: res.public_id,
       video_url: optimizedUrl,
       poster_url: posterUrl,
       type: videoType,
-      title: title,
+      title: res.context?.custom?.caption || 'فيديو مرعب',
       likes: 0,
       views: 0,
-      category: categoryTag,
+      category: res.context?.custom?.caption || 'غموض',
       created_at: res.created_at
     } as Video;
   });
 
-  // تحديث الكاش المحلي لضمان توفر الفيديوهات في المرة القادمة حتى بدون إنترنت
   if (mapped.length > 0) {
     localStorage.setItem('app_videos_cache', JSON.stringify(mapped));
   }

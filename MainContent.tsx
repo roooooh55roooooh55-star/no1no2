@@ -420,18 +420,18 @@ const MainContent: React.FC<MainContentProps> = ({
         </div>
       </section>
 
-      {/* مؤشر التحديث تحت اللوجو المركزي - داخل إطار ومرتفع قليلاً */}
+      {/* مؤشر التحديث تحت اللوجو المركزي - إطار احترافي وموقع مرتفع */}
       {loading && (
-        <div className="fixed top-[65px] left-1/2 -translate-x-1/2 z-[110] pointer-events-none">
-           <div className="bg-black/90 border border-yellow-500/50 px-4 py-1 rounded-lg backdrop-blur-md shadow-[0_0_15px_rgba(250,204,21,0.3)]">
-             <span className="text-yellow-400 font-black text-[9px] animate-pulse drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] tracking-widest">تحديث...</span>
+        <div className="fixed top-[52px] left-1/2 -translate-x-1/2 z-[110] pointer-events-none transition-all duration-500">
+           <div className="bg-black/95 border-2 border-yellow-500/60 px-5 py-1 rounded-xl backdrop-blur-2xl shadow-[0_0_20px_rgba(250,204,21,0.4)] animate-in fade-in zoom-in duration-300">
+             <span className="text-yellow-400 font-black text-[10px] animate-pulse drop-shadow-[0_0_5px_rgba(250,204,21,1)] tracking-widest italic">تحديث...</span>
            </div>
         </div>
       )}
 
       {s1.length > 0 && (
-        <section className="mt-2">
-          {/* تم حذف عنوان القسم مختارات سريعة ورفع الشبكة للأعلى */}
+        <section className="mt-0.5">
+          {/* إزالة عنوان مختارات سريعة ورفع المحتوى للأعلى */}
           <div className="grid grid-cols-2 gap-3">
             {s1.map(v => (
               <div key={v.id} onClick={() => onPlayShort(v, allShorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
