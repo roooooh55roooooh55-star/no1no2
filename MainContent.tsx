@@ -137,7 +137,7 @@ const SmartMarquee: React.FC<{
   const tripledItems = useMemo(() => [...items, ...items, ...items], [items]);
 
   useEffect(() => {
-    if (!scrollRef.current || isOverlayActive || isPaused || isInteracting) return;
+    if (!scrollRef.current || isOverlayActive || isPaused || isInteracting || items.length === 0) return;
 
     const scroll = () => {
       if (scrollRef.current) {
@@ -167,6 +167,8 @@ const SmartMarquee: React.FC<{
       setIsPaused(false);
     }, 3000); 
   };
+
+  if (items.length === 0) return null;
 
   return (
     <div 
@@ -211,7 +213,7 @@ const UnwatchedMarquee: React.FC<{
   const tripledItems = useMemo(() => [...items, ...items, ...items], [items]);
 
   useEffect(() => {
-    if (!scrollRef.current || isOverlayActive || isPaused || isInteracting) return;
+    if (!scrollRef.current || isOverlayActive || isPaused || isInteracting || items.length === 0) return;
 
     const scroll = () => {
       if (scrollRef.current) {
@@ -239,6 +241,8 @@ const UnwatchedMarquee: React.FC<{
       setIsPaused(false);
     }, 3000);
   };
+
+  if (items.length === 0) return null;
 
   return (
     <div 
@@ -298,9 +302,6 @@ const MainContent: React.FC<MainContentProps> = ({
     return videos.filter(v => !excludedIds.includes(v.id || v.video_url));
   }, [videos, interactions.dislikedIds]);
 
-  const shorts = useMemo(() => filteredVideos.filter(v => v.type === 'short'), [filteredVideos]);
-  const longs = useMemo(() => filteredVideos.filter(v => v.type === 'long'), [filteredVideos]);
-
   const unwatchedData = useMemo(() => {
     const seen = new Set();
     const result: { video: Video, progress: number }[] = [];
@@ -317,26 +318,49 @@ const MainContent: React.FC<MainContentProps> = ({
     return result;
   }, [interactions.watchHistory, videos]);
 
-  // تجهيز مجموعات البيانات المكررة
-  const s1 = useMemo(() => shorts.slice(0, 4), [shorts]);
-  const s2 = useMemo(() => shorts.slice(4, 8), [shorts]);
-  const sHappy = useMemo(() => shorts.slice(8, 18), [shorts]);
-  const sNew = useMemo(() => shorts.slice(18, 28), [shorts]);
-  const sScreams = useMemo(() => shorts.slice(28, 32), [shorts]);
-  const sLabyrinth = useMemo(() => shorts.slice(32, 42), [shorts]);
-  const sEnd = useMemo(() => shorts.slice(42, 52), [shorts]);
+  // منطق توزيع الفيديوهات بدون تكرار
+  const sectionsData = useMemo(() => {
+    let availShorts = filteredVideos.filter(v => v.type === 'short');
+    let availLongs = filteredVideos.filter(v => v.type === 'long');
 
-  const l1 = useMemo(() => longs.slice(0, 3), [longs]);
-  const lInsight = useMemo(() => longs.slice(-10).reverse(), [longs]);
-  const lArchive = useMemo(() => longs.slice(3, 6), [longs]);
-  const lVisions = useMemo(() => longs.slice(6, 16).reverse(), [longs]);
+    const takeShorts = (n: number) => {
+      const chunk = availShorts.slice(0, n);
+      availShorts = availShorts.slice(n);
+      return chunk;
+    };
+    const takeLongs = (n: number) => {
+      const chunk = availLongs.slice(0, n);
+      availLongs = availLongs.slice(n);
+      return chunk;
+    };
 
-  // مجموعات جديدة للتكرار الإضافي في الأسفل
-  const sCursed = useMemo(() => shorts.slice(52, 56), [shorts]);
-  const sNoReturn = useMemo(() => shorts.slice(56, 66), [shorts]);
-  const lLegends = useMemo(() => longs.slice(16, 19), [longs]);
-  const sBehind = useMemo(() => shorts.slice(66, 76), [shorts]);
-  const sHell = useMemo(() => shorts.slice(76, 80), [shorts]);
+    return {
+      s1: takeShorts(4),
+      s2: takeShorts(4),
+      sHappy: takeShorts(10),
+      sNew: takeShorts(10),
+      sScreams: takeShorts(4),
+      sLabyrinth: takeShorts(10),
+      sEnd: takeShorts(10),
+      sCursed: takeShorts(4),
+      sNoReturn: takeShorts(10),
+      sBehind: takeShorts(10),
+      sHell: takeShorts(4),
+      l1: takeLongs(3),
+      lInsight: takeLongs(10),
+      lArchive: takeLongs(3),
+      lVisions: takeLongs(10),
+      lLegends: takeLongs(3)
+    };
+  }, [filteredVideos]);
+
+  const { 
+    s1, s2, sHappy, sNew, sScreams, sLabyrinth, sEnd, sCursed, sNoReturn, sBehind, sHell,
+    l1, lInsight, lArchive, lVisions, lLegends 
+  } = sectionsData;
+
+  const allShorts = useMemo(() => filteredVideos.filter(v => v.type === 'short'), [filteredVideos]);
+  const allLongs = useMemo(() => filteredVideos.filter(v => v.type === 'long'), [filteredVideos]);
 
   return (
     <div 
@@ -368,19 +392,21 @@ const MainContent: React.FC<MainContentProps> = ({
       </section>
 
       {/* 1. مختارات سريعة */}
-      <section className="mt-6">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_red]"></span>
-          <h2 className="text-xs font-black text-red-600 uppercase tracking-[0.2em] italic">مختارات سريعة</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {s1.map(v => (
-            <div key={v.id} onClick={() => onPlayShort(v, shorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} showNewBadge={true} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {s1.length > 0 && (
+        <section className="mt-6">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_red]"></span>
+            <h2 className="text-xs font-black text-red-600 uppercase tracking-[0.2em] italic">مختارات سريعة</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {s1.map(v => (
+              <div key={v.id} onClick={() => onPlayShort(v, allShorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} showNewBadge={true} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 2. نواصل الحكاية */}
       {unwatchedData.length > 0 && (
@@ -389,48 +415,54 @@ const MainContent: React.FC<MainContentProps> = ({
             <span className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce shadow-[0_0_10px_yellow]"></span>
             <h2 className="text-xs font-black text-yellow-500 uppercase tracking-[0.2em] italic">نواصل الحكاية</h2>
           </div>
-          <UnwatchedMarquee items={unwatchedData} onPlayShort={onPlayShort} onPlayLong={(v) => onPlayLong(v, longs)} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+          <UnwatchedMarquee items={unwatchedData} onPlayShort={onPlayShort} onPlayLong={(v) => onPlayLong(v, allLongs)} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
         </section>
       )}
 
       {/* 3. كوابيس مطولة */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-purple-600 rounded-full shadow-[0_0_10px_purple]"></span>
-          <h2 className="text-xs font-black text-purple-600 uppercase tracking-[0.2em] italic">كوابيس مطولة</h2>
-        </div>
-        <div className="flex flex-col gap-4">
-          {l1.map((video) => (
-            <div key={video.id} onClick={() => onPlayLong(video, longs)} className="aspect-video cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={video} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(video.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {l1.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-purple-600 rounded-full shadow-[0_0_10px_purple]"></span>
+            <h2 className="text-xs font-black text-purple-600 uppercase tracking-[0.2em] italic">كوابيس مطولة</h2>
+          </div>
+          <div className="flex flex-col gap-4">
+            {l1.map((video) => (
+              <div key={video.id} onClick={() => onPlayLong(video, allLongs)} className="aspect-video cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={video} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(video.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 4. جرعة رعب مكثفة */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_red]"></span>
-          <h2 className="text-xs font-black text-red-600 uppercase tracking-[0.2em] italic">جرعة رعب مكثفة</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {s2.map(v => (
-            <div key={v.id} onClick={() => onPlayShort(v, shorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {s2.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_red]"></span>
+            <h2 className="text-xs font-black text-red-600 uppercase tracking-[0.2em] italic">جرعة رعب مكثفة</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {s2.map(v => (
+              <div key={v.id} onClick={() => onPlayShort(v, allShorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 5. رحلة سعيدة (شورتس LTR) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-cyan-500 rounded-full shadow-[0_0_10px_cyan] animate-pulse"></span>
-          <h2 className="text-xs font-black text-cyan-500 uppercase tracking-[0.2em] italic">رحلة سعيدة</h2>
-        </div>
-        <SmartMarquee items={sHappy} onPlay={(v) => onPlayShort(v, shorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
-      </section>
+      {sHappy.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-cyan-500 rounded-full shadow-[0_0_10px_cyan] animate-pulse"></span>
+            <h2 className="text-xs font-black text-cyan-500 uppercase tracking-[0.2em] italic">رحلة سعيدة</h2>
+          </div>
+          <SmartMarquee items={sHappy} onPlay={(v) => onPlayShort(v, allShorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+        </section>
+      )}
 
       {/* 6. نبذة (طويل LTR) */}
       {lInsight.length > 0 && (
@@ -439,142 +471,160 @@ const MainContent: React.FC<MainContentProps> = ({
             <span className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_green] animate-pulse"></span>
             <h2 className="text-xs font-black text-green-500 uppercase tracking-[0.2em] italic">نبذة</h2>
           </div>
-          <SmartMarquee items={lInsight} onPlay={(v) => onPlayLong(v, longs)} isOverlayActive={isOverlayActive} isShort={false} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+          <SmartMarquee items={lInsight} onPlay={(v) => onPlayLong(v, allLongs)} isOverlayActive={isOverlayActive} isShort={false} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
         </section>
       )}
 
       {/* 7. رحلة جديدة (شورتس LTR) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-orange-600 rounded-full shadow-[0_0_10px_orange] animate-bounce"></span>
-          <h2 className="text-xs font-black text-orange-600 uppercase tracking-[0.2em] italic">رحلة جديدة</h2>
-        </div>
-        <SmartMarquee items={sNew} onPlay={(v) => onPlayShort(v, shorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
-      </section>
+      {sNew.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-orange-600 rounded-full shadow-[0_0_10px_orange] animate-bounce"></span>
+            <h2 className="text-xs font-black text-orange-600 uppercase tracking-[0.2em] italic">رحلة جديدة</h2>
+          </div>
+          <SmartMarquee items={sNew} onPlay={(v) => onPlayShort(v, allShorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+        </section>
+      )}
 
-      {/* --- تكرار التصميم ببيانات جديدة --- */}
+      {/* 8. أرشيف الرعب */}
+      {lArchive.length > 0 && (
+        <section className="mt-12">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-gray-500 rounded-full shadow-[0_0_10px_gray]"></span>
+            <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] italic">أرشيف الرعب</h2>
+          </div>
+          <div className="flex flex-col gap-4">
+            {lArchive.map((video) => (
+              <div key={video.id} onClick={() => onPlayLong(video, allLongs)} className="aspect-video cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={video} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(video.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* 8. أرشيف الرعب (تكرار الكوابيس المطولة) */}
-      <section className="mt-12">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-gray-500 rounded-full shadow-[0_0_10px_gray]"></span>
-          <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] italic">أرشيف الرعب</h2>
-        </div>
-        <div className="flex flex-col gap-4">
-          {lArchive.map((video) => (
-            <div key={video.id} onClick={() => onPlayLong(video, longs)} className="aspect-video cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={video} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(video.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* 9. صدى الأرواح */}
+      {sScreams.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-white/20 rounded-full animate-ping"></span>
+            <h2 className="text-xs font-black text-white/40 uppercase tracking-[0.2em] italic">صدى الأرواح</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {sScreams.map(v => (
+              <div key={v.id} onClick={() => onPlayShort(v, allShorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* 9. صدى الأرواح (تكرار الشبكة) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-white/20 rounded-full animate-ping"></span>
-          <h2 className="text-xs font-black text-white/40 uppercase tracking-[0.2em] italic">صدى الأرواح</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {sScreams.map(v => (
-            <div key={v.id} onClick={() => onPlayShort(v, shorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* 10. همسات الليل */}
+      {sLabyrinth.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-indigo-600 rounded-full shadow-[0_0_10px_indigo]"></span>
+            <h2 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] italic">همسات الليل</h2>
+          </div>
+          <SmartMarquee items={sLabyrinth} onPlay={(v) => onPlayShort(v, allShorts)} isOverlayActive={isOverlayActive} isShort={true} direction="rtl" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+        </section>
+      )}
 
-      {/* 10. همسات الليل (تكرار الماركي RTL) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-indigo-600 rounded-full shadow-[0_0_10px_indigo]"></span>
-          <h2 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] italic">همسات الليل</h2>
-        </div>
-        <SmartMarquee items={sLabyrinth} onPlay={(v) => onPlayShort(v, shorts)} isOverlayActive={isOverlayActive} isShort={true} direction="rtl" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
-      </section>
+      {/* 11. ما وراء الطبيعة */}
+      {lVisions.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-pink-600 rounded-full shadow-[0_0_10px_pink] animate-pulse"></span>
+            <h2 className="text-xs font-black text-pink-600 uppercase tracking-[0.2em] italic">ما وراء الطبيعة</h2>
+          </div>
+          <SmartMarquee items={lVisions} onPlay={(v) => onPlayLong(v, allLongs)} isOverlayActive={isOverlayActive} isShort={false} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+        </section>
+      )}
 
-      {/* 11. ما وراء الطبيعة (تكرار طويل LTR) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-pink-600 rounded-full shadow-[0_0_10px_pink] animate-pulse"></span>
-          <h2 className="text-xs font-black text-pink-600 uppercase tracking-[0.2em] italic">ما وراء الطبيعة</h2>
-        </div>
-        <SmartMarquee items={lVisions} onPlay={(v) => onPlayLong(v, longs)} isOverlayActive={isOverlayActive} isShort={false} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
-      </section>
+      {/* 12. نهاية الدهليز */}
+      {sEnd.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-red-800 rounded-full shadow-[0_0_10px_red] animate-bounce"></span>
+            <h2 className="text-xs font-black text-red-800 uppercase tracking-[0.2em] italic">نهاية الدهليز</h2>
+          </div>
+          <SmartMarquee items={sEnd} onPlay={(v) => onPlayShort(v, allShorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+        </section>
+      )}
 
-      {/* 12. نهاية الدهليز (تكرار شورتس LTR) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-red-800 rounded-full shadow-[0_0_10px_red] animate-bounce"></span>
-          <h2 className="text-xs font-black text-red-800 uppercase tracking-[0.2em] italic">نهاية الدهليز</h2>
-        </div>
-        <SmartMarquee items={sEnd} onPlay={(v) => onPlayShort(v, shorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
-      </section>
+      {/* 13. المدخل الملعون */}
+      {sCursed.length > 0 && (
+        <section className="mt-12">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-orange-700 rounded-full animate-pulse"></span>
+            <h2 className="text-xs font-black text-orange-700 uppercase tracking-[0.2em] italic">المدخل الملعون</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {sCursed.map(v => (
+              <div key={v.id} onClick={() => onPlayShort(v, allShorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* --- تكرار إضافي لضمان تجربة مستمرة عند النزول --- */}
+      {/* 14. طريق اللا عودة */}
+      {sNoReturn.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-emerald-600 rounded-full shadow-[0_0_10px_emerald]"></span>
+            <h2 className="text-xs font-black text-emerald-600 uppercase tracking-[0.2em] italic">طريق اللا عودة</h2>
+          </div>
+          <SmartMarquee items={sNoReturn} onPlay={(v) => onPlayShort(v, allShorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+        </section>
+      )}
 
-      {/* 13. المدخل الملعون (تكرار الشبكة) */}
-      <section className="mt-12">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-orange-700 rounded-full animate-pulse"></span>
-          <h2 className="text-xs font-black text-orange-700 uppercase tracking-[0.2em] italic">المدخل الملعون</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {sCursed.map(v => (
-            <div key={v.id} onClick={() => onPlayShort(v, shorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* 15. أساطير سوداء */}
+      {lLegends.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-blue-900 rounded-full"></span>
+            <h2 className="text-xs font-black text-blue-900 uppercase tracking-[0.2em] italic">أساطير سوداء</h2>
+          </div>
+          <div className="flex flex-col gap-4">
+            {lLegends.map((video) => (
+              <div key={video.id} onClick={() => onPlayLong(video, allLongs)} className="aspect-video cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={video} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(video.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* 14. طريق اللا عودة (شورتس LTR) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-emerald-600 rounded-full shadow-[0_0_10px_emerald]"></span>
-          <h2 className="text-xs font-black text-emerald-600 uppercase tracking-[0.2em] italic">طريق اللا عودة</h2>
-        </div>
-        <SmartMarquee items={sNoReturn} onPlay={(v) => onPlayShort(v, shorts)} isOverlayActive={isOverlayActive} isShort={true} direction="ltr" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
-      </section>
+      {/* 16. خلف الأبواب */}
+      {sBehind.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-yellow-900 rounded-full animate-ping"></span>
+            <h2 className="text-xs font-black text-yellow-900 uppercase tracking-[0.2em] italic">خلف الأبواب</h2>
+          </div>
+          <SmartMarquee items={sBehind} onPlay={(v) => onPlayShort(v, allShorts)} isOverlayActive={isOverlayActive} isShort={true} direction="rtl" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
+        </section>
+      )}
 
-      {/* 15. أساطير سوداء (تكرار كوابيس مطولة) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-blue-900 rounded-full"></span>
-          <h2 className="text-xs font-black text-blue-900 uppercase tracking-[0.2em] italic">أساطير سوداء</h2>
-        </div>
-        <div className="flex flex-col gap-4">
-          {lLegends.map((video) => (
-            <div key={video.id} onClick={() => onPlayLong(video, longs)} className="aspect-video cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={video} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(video.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 16. خلف الأبواب (شورتس RTL) */}
-      <section className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-yellow-900 rounded-full animate-ping"></span>
-          <h2 className="text-xs font-black text-yellow-900 uppercase tracking-[0.2em] italic">خلف الأبواب</h2>
-        </div>
-        <SmartMarquee items={sBehind} onPlay={(v) => onPlayShort(v, shorts)} isOverlayActive={isOverlayActive} isShort={true} direction="rtl" onCategorySelect={onCategorySelect} onLike={onLike} likedIds={interactions.likedIds} />
-      </section>
-
-      {/* 17. أعماق الجحيم (تكرار الشبكة) */}
-      <section className="mt-8 mb-24">
-        <div className="flex items-center gap-2 mb-3 px-2">
-          <span className="w-2 h-2 bg-red-950 rounded-full shadow-[0_0_15px_red]"></span>
-          <h2 className="text-xs font-black text-red-950 uppercase tracking-[0.2em] italic">أعماق الجحيم</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {sHell.map(v => (
-            <div key={v.id} onClick={() => onPlayShort(v, shorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
-              <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* 17. أعماق الجحيم */}
+      {sHell.length > 0 && (
+        <section className="mt-8 mb-24">
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <span className="w-2 h-2 bg-red-950 rounded-full shadow-[0_0_15px_red]"></span>
+            <h2 className="text-xs font-black text-red-950 uppercase tracking-[0.2em] italic">أعماق الجحيم</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {sHell.map(v => (
+              <div key={v.id} onClick={() => onPlayShort(v, allShorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
+                <VideoCardThumbnail video={v} isOverlayActive={isOverlayActive} onCategorySelect={onCategorySelect} onLike={onLike} isLiked={interactions.likedIds.includes(v.id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {loading && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50">
