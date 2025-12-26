@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Video } from '../types';
-import { fetchCloudinaryVideos } from '../cloudinaryClient';
-import { getDeterministicStats, formatBigNumber } from './MainContent';
+import { Video } from './types.ts';
+import { fetchCloudinaryVideos } from './cloudinaryClient.ts';
+import { getDeterministicStats, formatBigNumber } from './MainContent.tsx';
 
 const LOGO_URL = "https://i.top4top.io/p_3643ksmii1.jpg";
 

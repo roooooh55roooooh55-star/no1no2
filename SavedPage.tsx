@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Video } from '../types';
+import { Video } from './types.ts';
 
 interface SavedPageProps {
   savedIds: string[];
