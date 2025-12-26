@@ -69,7 +69,7 @@ const VideoCardThumbnail: React.FC<{
         )}
       </div>
 
-      {/* زر الإعجاب في الزاوية العليا لجميع الأقسام */}
+      {/* زر الإعجاب في الزاوية العليا متاح في جميع الأقسام */}
       <div className="absolute top-2 right-2 z-30">
         <button 
           onClick={(e) => { e.stopPropagation(); onLike?.(video.id); }}
@@ -142,7 +142,7 @@ const SmartMarquee: React.FC<{
 
     const scroll = () => {
       if (scrollRef.current) {
-        // في نظام RTL: إنقاص scrollLeft يحرك لليمين (LTR)، وزيادته تحرك لليسار (RTL)
+        // اتجاه التمرير: LTR يعني التحرك من اليسار لليمين
         const step = direction === 'rtl' ? 1 : -1;
         scrollRef.current.scrollLeft += step;
         
@@ -321,7 +321,7 @@ const MainContent: React.FC<MainContentProps> = ({
 
   const shortsGroup1 = useMemo(() => shorts.slice(0, 4), [shorts]);
   const shortsGroup2 = useMemo(() => shorts.slice(4, 8), [shorts]);
-  // تحديث قسم رحلة سعيدة ليعرض 10 فيديوهات شورتس تحديداً
+  // قسم رحلة سعيدة: يعرض 10 فيديوهات شورتس تحديداً
   const shortsHappyTrip = useMemo(() => shorts.slice(8, 18), [shorts]);
   const shortsNewAdventure = useMemo(() => shorts.slice(18, 28).reverse(), [shorts]);
 
@@ -442,7 +442,7 @@ const MainContent: React.FC<MainContentProps> = ({
         </div>
       </section>
 
-      {/* 5. رحلة سعيدة (شورتس LTR) - يعرض 10 فيديوهات */}
+      {/* 5. رحلة سعيدة (شورتس LTR) - يعرض 10 فيديوهات تمر من الشمال لليمين */}
       <section className="mt-8">
         <div className="flex items-center gap-2 mb-3 px-2">
           <span className="w-2 h-2 bg-cyan-500 rounded-full shadow-[0_0_10px_cyan] animate-pulse"></span>
