@@ -321,9 +321,9 @@ const MainContent: React.FC<MainContentProps> = ({
 
   const shortsGroup1 = useMemo(() => shorts.slice(0, 4), [shorts]);
   const shortsGroup2 = useMemo(() => shorts.slice(4, 8), [shorts]);
-  const shortsHappyTrip = useMemo(() => shorts.slice(8, 16), [shorts]);
-  // مجموعة الفيديوهات لقسم "رحلة جديدة" (10 فيديوهات شورتس تحديداً)
-  const shortsNewAdventure = useMemo(() => shorts.slice(16, 26).reverse(), [shorts]);
+  // تحديث قسم رحلة سعيدة ليعرض 10 فيديوهات شورتس تحديداً
+  const shortsHappyTrip = useMemo(() => shorts.slice(8, 18), [shorts]);
+  const shortsNewAdventure = useMemo(() => shorts.slice(18, 28).reverse(), [shorts]);
 
   const longsFeatured = useMemo(() => longs.slice(0, 3), [longs]);
   const longsInsight = useMemo(() => {
@@ -442,7 +442,7 @@ const MainContent: React.FC<MainContentProps> = ({
         </div>
       </section>
 
-      {/* 5. رحلة سعيدة (شورتس LTR) */}
+      {/* 5. رحلة سعيدة (شورتس LTR) - يعرض 10 فيديوهات */}
       <section className="mt-8">
         <div className="flex items-center gap-2 mb-3 px-2">
           <span className="w-2 h-2 bg-cyan-500 rounded-full shadow-[0_0_10px_cyan] animate-pulse"></span>
@@ -480,7 +480,7 @@ const MainContent: React.FC<MainContentProps> = ({
         </section>
       )}
 
-      {/* 7. رحلة جديدة (شورتس LTR) - القسم المطلوب الجديد أسفل قسم نبذة */}
+      {/* 7. رحلة جديدة (شورتس LTR) */}
       <section className="mt-8 mb-12">
         <div className="flex items-center gap-2 mb-3 px-2">
           <span className="w-2 h-2 bg-orange-600 rounded-full shadow-[0_0_10px_orange] animate-bounce"></span>
