@@ -271,11 +271,25 @@ interface MainContentProps {
   onLike?: (id: string) => void;
 }
 
+const LionIcon = () => (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2C6.48 2 2 6.48 2 12c0 2.5 1 4.5 2.5 6l1.5 1.5"/>
+    <path d="M18 19.5l1.5-1.5c1.5-1.5 2.5-3.5 2.5-6 0-5.52-4.48-10-10-10"/>
+    <circle cx="9" cy="11" r="1"/>
+    <circle cx="15" cy="11" r="1"/>
+    <path d="M12 14v2m-2-1h4"/>
+    <path d="M7 6c-1 1-1.5 2.5-1.5 4"/>
+    <path d="M17 6c1 1 1.5 2.5 1.5 4"/>
+    <path d="M12 2v2"/>
+  </svg>
+);
+
 const MainContent: React.FC<MainContentProps> = ({ 
   videos, categoriesList, interactions, onPlayShort, onPlayLong, onHardRefresh, loading, isTitleYellow, onSearchToggle, isOverlayActive, onCategorySelect, onLike
 }) => {
   const [startY, setStartY] = useState(0);
   const [pullOffset, setPullOffset] = useState(0);
+  const [cacheStatus, setCacheStatus] = useState<'idle' | 'downloading' | 'finished'>('idle');
 
   const filteredVideos = useMemo(() => {
     const excludedIds = interactions.dislikedIds;
@@ -333,6 +347,27 @@ const MainContent: React.FC<MainContentProps> = ({
     };
   }, [filteredVideos]);
 
+  const handleCacheAll = async () => {
+    if (cacheStatus !== 'idle') return;
+    setCacheStatus('downloading');
+    try {
+      const cache = await caches.open('hadiqa-video-cache-v1');
+      const urls = filteredVideos.map(v => v.video_url);
+      
+      // نقوم بالتحميل بشكل تسلسلي لتجنب استهلاك موارد الهاتف فجأة
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) await cache.put(url, response);
+        } catch (e) { console.error("Cache failed for:", url); }
+      }
+      setCacheStatus('finished');
+    } catch (e) {
+      console.error("Cache Error:", e);
+      setCacheStatus('idle');
+    }
+  };
+
   const { 
     s1, s2, sHappy, sNew, sScreams, sLabyrinth, sEnd, sCursed, sNoReturn, sBehind, sHell,
     l1, lInsight, lArchive, lVisions, lLegends 
@@ -340,6 +375,12 @@ const MainContent: React.FC<MainContentProps> = ({
 
   const allShorts = useMemo(() => filteredVideos.filter(v => v.type === 'short'), [filteredVideos]);
   const allLongs = useMemo(() => filteredVideos.filter(v => v.type === 'long'), [filteredVideos]);
+
+  const lionBtnClass = useMemo(() => {
+    if (cacheStatus === 'downloading') return 'text-green-500 border-green-500 bg-green-500/10 shadow-[0_0_20px_#22c55e] animate-pulse';
+    if (cacheStatus === 'finished') return 'text-yellow-400 border-yellow-400 bg-yellow-400/10 shadow-[0_0_20px_#facc15]';
+    return 'text-red-600 border-red-600 bg-red-600/5';
+  }, [cacheStatus]);
 
   return (
     <div 
@@ -352,7 +393,7 @@ const MainContent: React.FC<MainContentProps> = ({
     >
       <section className="flex items-center justify-between py-1 border-b border-white/5 bg-black sticky top-0 z-40">
         <div className="flex items-center gap-2 cursor-pointer" onClick={onHardRefresh}>
-          <img src={LOGO_URL} className="w-8 h-8 rounded-full border border-red-600 shadow-[0_0_10px_red]" alt="Logo" />
+          <img src={LOGO_URL} className="w-10 h-10 rounded-full border border-red-600 shadow-[0_0_10px_red]" alt="Logo" />
           <div className="flex flex-col text-right">
             <h1 className={`text-base font-black italic transition-all duration-500 ${isTitleYellow ? 'text-yellow-400 drop-shadow-[0_0_20px_#facc15]' : 'text-red-600 drop-shadow-[0_0_10px_red]'}`}>
               الحديقة المرعبة
@@ -360,9 +401,13 @@ const MainContent: React.FC<MainContentProps> = ({
             <p className="text-[5px] text-blue-400 font-black tracking-widest uppercase -mt-0.5 opacity-60">AI PERSONALIZED FEED</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-           <button onClick={() => window.open('https://snaptubeapp.com', '_blank')} className="w-10 h-10 rounded-xl border border-yellow-600/30 flex items-center justify-center text-yellow-600 bg-yellow-600/5">
-              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M15.5,13.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5 s1.5,0.67,1.5,1.5S16.33,13.5,15.5,13.5z M8.5,13.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S9.33,13.5,8.5,13.5z M12,18c-2.33,0-4.39-1.39-5.33-3.41c-0.12-0.27,0.01-0.59,0.28-0.71c0.27-0.12,0.59,0.01,0.71,0.28C8.42,15.89,10.1,17,12,17 s3.58-1.11,4.34-2.84c0.12-0.27,0.44-0.4,0.71-0.28c0.27,0.12,0.4,0.44,0.28,0.71C16.39,16.61,14.33,18,12,18z"/></svg>
+        <div className="flex items-center gap-2">
+           <button 
+             onClick={handleCacheAll}
+             className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 ${lionBtnClass}`}
+             title="تحميل الكل للمشاهدة بدون إنترنت"
+           >
+             <LionIcon />
            </button>
            <button onClick={onSearchToggle} className="w-10 h-10 rounded-xl bg-blue-500/5 border border-blue-500/30 flex items-center justify-center text-blue-500 transition-all">
              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
