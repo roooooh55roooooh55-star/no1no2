@@ -5,27 +5,43 @@ const CLOUD_NAME = 'dlrvn33p0'.trim();
 const COMMON_TAG = 'hadiqa_v4';
 
 /**
- * وظيفة لتخزين الفيديوهات فعلياً في ذاكرة الهاتف (Cache Storage)
+ * وظيفة "المستودع الذكي": تقوم بتحميل فيديوهات في ذاكرة الكاش (Cache) 
+ * لضمان تشغيلها فوراً بدون انتظار تحميل.
  */
 export const cacheTrendingVideos = async (videos: Video[]) => {
-  if ('caches' in window) {
-    try {
-      const videoCache = await caches.open('horror-garden-v1');
-      // تحميل أول 7 فيديوهات لضمان تجربة فورية وسلسة
-      const priorityVideos = videos.slice(0, 7);
-      
-      priorityVideos.forEach(async (video) => {
-        const cacheResponse = await videoCache.match(video.video_url);
-        if (!cacheResponse) {
-          fetch(video.video_url).then(res => {
-            if (res.ok) videoCache.put(video.video_url, res);
-          }).catch(() => {});
-        }
-      });
-    } catch (e) {
-      console.error("Cache system failed", e);
-    }
+  if (!('caches' in window)) return;
+  try {
+    const videoCache = await caches.open('horror-garden-v1');
+    // تحميل أول 7 فيديوهات لضمان تجربة فورية
+    const priorityVideos = videos.slice(0, 7);
+    
+    priorityVideos.forEach(async (video) => {
+      const cacheResponse = await videoCache.match(video.video_url);
+      if (!cacheResponse) {
+        fetch(video.video_url, { mode: 'cors' }).then(res => {
+          if (res.ok) videoCache.put(video.video_url, res);
+        }).catch(() => {});
+      }
+    });
+  } catch (e) {
+    console.error("Cache system failed", e);
   }
+};
+
+/**
+ * وظيفة إضافية لتحميل الفيديوهات التي لم تظهر للمستخدم بعد
+ */
+export const forcePreloadUnseenVideos = async (videos: Video[]) => {
+  if (!('caches' in window)) return;
+  const cache = await caches.open('horror-garden-v1');
+  const seenIds = JSON.parse(localStorage.getItem('seen_video_ids') || '[]');
+  const unseen = videos.filter(v => !seenIds.includes(v.id)).slice(0, 5);
+
+  unseen.forEach(video => {
+    fetch(video.video_url, { mode: 'cors' }).then(res => {
+      if (res.ok) cache.put(video.video_url, res);
+    }).catch(() => {});
+  });
 };
 
 export const fetchCloudinaryVideos = async (): Promise<Video[]> => {
@@ -58,10 +74,11 @@ const mapCloudinaryData = (resources: any[]): Video[] => {
     const videoType: 'short' | 'long' = (res.height > res.width) ? 'short' : 'long';
     const baseUrl = `https://res.cloudinary.com/${CLOUD_NAME}/video/upload`;
     
-    // الإعدادات السينمائية لضمان أعلى دقة ووضوح (Full HD + Sharpen)
-    const cinematicParams = `q_auto:best,f_auto,e_sharpen:100,c_limit,w_1080,br_5m,vc_h264`;
+    // إعدادات سينمائية + سرعة (Baseline) متوافقة مع AppCreator24
+    // e_sharpen:100 للحدة، vc_h264:baseline للتوافق، br_5m لثبات البت ريت
+    const params = `q_auto:best,f_auto,e_sharpen:100,c_limit,w_1080,br_5m,vc_h264:baseline`;
     
-    const optimizedUrl = `${baseUrl}/${cinematicParams}/v${res.version}/${res.public_id}.mp4`;
+    const optimizedUrl = `${baseUrl}/${params}/v${res.version}/${res.public_id}.mp4`;
     const posterUrl = `${baseUrl}/q_auto:best,f_auto,so_0/v${res.version}/${res.public_id}.jpg`;
     
     return {
@@ -84,12 +101,6 @@ const mapCloudinaryData = (resources: any[]): Video[] => {
   return mapped;
 };
 
-export const deleteCloudinaryVideo = async (publicId: string) => {
-  console.warn("Delete requires Admin API credentials.");
-  return false;
-};
-
-export const updateCloudinaryMetadata = async (publicId: string, title: string, category: string) => {
-  console.warn("Update requires Admin API credentials.");
-  return false;
+export const updateCloudinaryMetadata = async (publicId: string, metadata: any) => {
+  console.warn("Metadata update via Client-side is restricted. Requires signed upload.");
 };

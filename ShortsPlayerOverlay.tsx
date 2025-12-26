@@ -13,10 +13,11 @@ interface ShortsPlayerOverlayProps {
   onSave: (id: string) => void;
   onProgress: (id: string, progress: number) => void;
   onCategorySelect?: (category: string) => void;
+  onVideoEnded?: () => void;
 }
 
 const ShortsPlayerOverlay: React.FC<ShortsPlayerOverlayProps> = ({ 
-  initialVideo, videoList, interactions, onClose, onLike, onDislike, onSave, onProgress, onCategorySelect
+  initialVideo, videoList, interactions, onClose, onLike, onDislike, onSave, onProgress, onCategorySelect, onVideoEnded
 }) => {
   const randomizedList = useMemo(() => {
     const otherVideos = videoList.filter(v => v.id !== initialVideo.id);
@@ -49,16 +50,23 @@ const ShortsPlayerOverlay: React.FC<ShortsPlayerOverlayProps> = ({
   };
 
   const playNextSmartly = useCallback(() => {
+    // الانتقال التلقائي للفيديو التالي
     const nextIdx = (currentIndex + 1) % randomizedList.length;
     if (containerRef.current) {
-      if (nextIdx === 0) {
+      if (nextIdx === 0 && !onVideoEnded) {
+        // إذا وصلنا للنهاية ولم يتم تمرير دالة خارجية
         containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
         setCurrentIndex(0);
       } else {
-        containerRef.current.scrollTo({ top: nextIdx * containerRef.current.clientHeight, behavior: 'smooth' });
+        containerRef.current.scrollTo({ 
+          top: nextIdx * containerRef.current.clientHeight, 
+          behavior: 'smooth' 
+        });
+        setCurrentIndex(nextIdx);
+        if (onVideoEnded) onVideoEnded();
       }
     }
-  }, [currentIndex, randomizedList.length]);
+  }, [currentIndex, randomizedList.length, onVideoEnded]);
 
   return (
     <div className="fixed inset-0 bg-black z-[500] flex flex-col overflow-hidden">
@@ -82,6 +90,7 @@ const ShortsPlayerOverlay: React.FC<ShortsPlayerOverlayProps> = ({
                   src={video.video_url} 
                   className={`h-full w-full object-cover transition-opacity duration-500 ${isActive && isBuffering ? 'opacity-40' : 'opacity-100'}`}
                   playsInline
+                  autoPlay={isActive}
                   onWaiting={() => isActive && setIsBuffering(true)}
                   onPlaying={() => isActive && setIsBuffering(false)}
                   onEnded={playNextSmartly}
@@ -119,10 +128,14 @@ const ShortsPlayerOverlay: React.FC<ShortsPlayerOverlayProps> = ({
               <div className="absolute bottom-28 right-6 left-28 z-40 text-right">
                 <div className="flex flex-col items-end gap-2">
                   <button 
-                    onClick={(e) => { e.stopPropagation(); onCategorySelect?.(video.category); }}
-                    className="border border-red-600 bg-red-600/10 px-3 py-1 rounded-md backdrop-blur-md active:scale-95 transition-transform"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if(onCategorySelect) onCategorySelect(video.category);
+                      onClose(); 
+                    }}
+                    className="bg-red-600/90 border-2 border-white/20 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow-[0_0_20px_rgba(0,0,0,0.5)] animate-pulse active:scale-95 transition-transform"
                   >
-                    <span className="text-[9px] font-black text-red-500 uppercase italic tracking-widest">{video.category}</span>
+                    {video.category} #
                   </button>
                   <div className="flex items-center justify-end gap-4 w-full">
                     <img 

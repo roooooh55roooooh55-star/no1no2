@@ -26,10 +26,10 @@
       * { scrollbar-width: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
       
       video {
-        filter: contrast(1.05) brightness(1.02); /* تعزيز التباين السينمائي الخفيف */
+        filter: contrast(1.1) brightness(1.05); /* تعزيز التباين السينمائي */
         object-fit: cover;
         background-color: #000;
-        image-rendering: -webkit-optimize-contrast; /* تحسين الحدة على الشاشات العالية */
+        image-rendering: high-quality; /* إجبار المتصفح على الرندر العالي */
       }
 
       @keyframes neon-breath {
@@ -62,6 +62,14 @@
       
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
+      }
+
+      .video-container::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 20%);
+        pointer-events: none;
       }
     </style>
     <script type="importmap">
