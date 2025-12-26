@@ -420,12 +420,18 @@ const MainContent: React.FC<MainContentProps> = ({
         </div>
       </section>
 
+      {/* مؤشر التحديث تحت اللوجو المركزي - داخل إطار ومرتفع قليلاً */}
+      {loading && (
+        <div className="fixed top-[65px] left-1/2 -translate-x-1/2 z-[110] pointer-events-none">
+           <div className="bg-black/90 border border-yellow-500/50 px-4 py-1 rounded-lg backdrop-blur-md shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+             <span className="text-yellow-400 font-black text-[9px] animate-pulse drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] tracking-widest">تحديث...</span>
+           </div>
+        </div>
+      )}
+
       {s1.length > 0 && (
-        <section className="mt-6">
-          <div className="flex items-center gap-2 mb-3 px-2">
-            <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_red]"></span>
-            <h2 className="text-xs font-black text-red-600 uppercase tracking-[0.2em] italic">مختارات سريعة</h2>
-          </div>
+        <section className="mt-2">
+          {/* تم حذف عنوان القسم مختارات سريعة ورفع الشبكة للأعلى */}
           <div className="grid grid-cols-2 gap-3">
             {s1.map(v => (
               <div key={v.id} onClick={() => onPlayShort(v, allShorts)} className="aspect-[9/16] cursor-pointer active:scale-95 transition-transform">
@@ -636,12 +642,6 @@ const MainContent: React.FC<MainContentProps> = ({
             ))}
           </div>
         </section>
-      )}
-
-      {loading && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50">
-           <span className="text-yellow-500 font-black text-[10px] animate-pulse bg-black/80 px-4 py-1 rounded-full border border-yellow-500/30 backdrop-blur-md">تنسيق المستودع السحابي...</span>
-        </div>
       )}
     </div>
   );
